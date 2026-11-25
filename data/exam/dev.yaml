@@ -61,3 +61,6 @@
     SELECT s.name, i.invoice_number
     FROM supplier_invoices i JOIN suppliers s ON i.supplier_id = s.id
     WHERE i.amount_paid < i.total_amount
+
+
+

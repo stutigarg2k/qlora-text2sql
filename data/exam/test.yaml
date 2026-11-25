@@ -1,0 +1,40 @@
+- id: payments_over_5_days_late
+  category: date_arithmetic
+  question: List the payment references of payments made more than 5 days after the invoice due date.
+  sql: |
+    SELECT s.reference
+    FROM supplier_payments s
+    JOIN supplier_invoices i ON s.supplier_invoice_id = i.id
+    WHERE julianday(s.payment_date) - julianday(i.due_date) > 5
+
+- id: suppliers_30_day_terms
+  category: single_table
+  question: Which suppliers have a payment term of 30 days?
+  sql: |
+    SELECT name FROM suppliers
+    WHERE payment_terms_days = 30
+
+- id: orders_in_2024
+  category: single_table
+  question: How many purchase orders were placed in 2024?
+  sql: |
+    SELECT COUNT(*) FROM purchase_orders
+    WHERE strftime('%Y', order_date) = '2024'
+
+- id: quantity_per_product
+  category: aggregate
+  question: Show each product description and the total quantity ordered.
+  sql: |
+    SELECT description, SUM(quantity) AS total_quantity
+    FROM purchase_order_lines
+    GROUP BY description
+
+- id: hiking_boots_orders
+  category: join
+  question: "List the PO numbers of orders that include the product \"Hiking Boots - Women's\"."
+  sql: |
+    SELECT p.po_number
+    FROM purchase_orders p
+    JOIN purchase_order_lines l ON l.order_id = p.id
+    WHERE l.description = 'Hiking Boots - Women''s'
+    
