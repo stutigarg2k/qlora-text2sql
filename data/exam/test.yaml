@@ -37,4 +37,50 @@
     FROM purchase_orders p
     JOIN purchase_order_lines l ON l.order_id = p.id
     WHERE l.description = 'Hiking Boots - Women''s'
-    
+
+
+
+- id: paid_per_supplier
+  category: join_aggregate
+  question: What is the total amount paid to each supplier?
+  sql: |
+    SELECT s.name, SUM(p.amount)
+    FROM supplier_payments p
+    JOIN supplier_invoices i ON p.supplier_invoice_id = i.id
+    JOIN suppliers s ON i.supplier_id = s.id
+    GROUP BY s.id
+
+- id: invoices_due_march_2025
+  category: single_table
+  question: List the invoice numbers of invoices with a due date in March 2025.
+  sql: |
+    SELECT invoice_number FROM supplier_invoices
+    WHERE due_date >= '2025-03-01' AND due_date < '2025-04-01'
+
+- id: top_product_by_quantity
+  category: aggregate
+  question: Which product has the highest total quantity ordered?
+  sql: |
+    SELECT description
+    FROM purchase_order_lines
+    GROUP BY description
+    ORDER BY SUM(quantity) DESC
+    LIMIT 1
+
+- id: average_line_quantity
+  category: single_table
+  question: What is the average quantity per order line?
+  sql: |
+    SELECT AVG(quantity) FROM purchase_order_lines
+
+- id: large_orders_with_supplier
+  category: join
+  question: List the PO number and supplier name of every purchase order with a total amount above 5000.
+  sql: |
+    SELECT p.po_number, s.name
+    FROM purchase_orders p
+    JOIN suppliers s ON p.supplier_id = s.id
+    WHERE p.total_amount > 5000
+
+
+
