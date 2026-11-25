@@ -12,4 +12,8 @@ English questions into SQL, evaluated on a supply-chain database.
 
 ## Data sources
 - Training: `b-mc2/sql-create-context` (CC-BY-4.0)
-- Evaluation database: derived from `mindweave/purchasing-procurement-us` (license: TBD)
+- Evaluation database: built from `mindweave/purchasing-procurement-us`,
+  CC-BY-NC-4.0 (credit: Mindweave Technologies). Used for non-commercial,
+  educational purposes only. The data is not included in this repo;
+  `src/build_eval_db.py` downloads it and builds the database locally.
+- Code: MIT License. The MIT license does not extend to the datasets above.
