@@ -83,4 +83,76 @@
     WHERE p.total_amount > 5000
 
 
+- id: distinct_products_ordered
+  category: aggregate
+  question: How many distinct product descriptions appear on purchase order lines?
+  sql: |
+    SELECT COUNT(DISTINCT description) FROM purchase_order_lines
+
+- id: suppliers_over_150_orders
+  category: join_aggregate
+  question: Which suppliers have more than 150 purchase orders?
+  sql: |
+    SELECT s.name
+    FROM purchase_orders p
+    JOIN suppliers s ON p.supplier_id = s.id
+    GROUP BY s.id
+    HAVING COUNT(*) > 150
+
+- id: suppliers_lead_time_10_or_less
+  category: single_table
+  question: Which suppliers have a lead time of 10 days or less?
+  sql: |
+    SELECT name FROM suppliers
+    WHERE lead_time_days <= 10
+
+- id: distinct_payment_terms
+  category: single_table
+  question: What distinct payment terms (in days) do suppliers offer?
+  sql: |
+    SELECT DISTINCT payment_terms_days FROM suppliers
+
+- id: suppliers_per_category
+  category: aggregate
+  question: How many suppliers are there in each category?
+  sql: |
+    SELECT category, COUNT(*) FROM suppliers
+    GROUP BY category
+
+- id: earliest_latest_order
+  category: aggregate
+  question: What are the earliest and latest order dates among purchase orders?
+  sql: |
+    SELECT MIN(order_date), MAX(order_date) FROM purchase_orders
+
+- id: longest_lead_time_ordered_supplier
+  category: subquery
+  question: Among suppliers that have received at least one purchase order, which has the longest lead time?
+  sql: |
+    SELECT name FROM suppliers
+    WHERE id IN (SELECT supplier_id FROM purchase_orders)
+    ORDER BY lead_time_days DESC
+    LIMIT 1
+
+- id: orders_above_average_total
+  category: subquery
+  question: List the PO numbers of purchase orders whose total amount is above the average purchase order total.
+  sql: |
+    SELECT po_number FROM purchase_orders
+    WHERE total_amount > (SELECT AVG(total_amount) FROM purchase_orders)
+
+- id: highest_total_pos
+  category: subquery
+  question: List the PO numbers of all purchase orders that have the highest total amount.
+  sql: |
+    SELECT po_number FROM purchase_orders
+    WHERE total_amount = (SELECT MAX(total_amount) FROM purchase_orders)
+
+- id: orders_for_lozano
+  category: join_aggregate
+  question: How many purchase orders were placed with the supplier Lozano, Chaney and Carr?
+  sql: |
+    SELECT COUNT(*) FROM purchase_orders p
+    JOIN suppliers s ON p.supplier_id = s.id
+    WHERE s.name = 'Lozano, Chaney and Carr'
 
