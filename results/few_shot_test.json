@@ -1,0 +1,228 @@
+{
+  "setup": {
+    "model": "HuggingFaceTB/SmolLM3-3B",
+    "precision": "4-bit nf4",
+    "decoding": "greedy",
+    "prompt": "few-shot, 3 dev examples",
+    "examples": [
+      "spend_per_supplier",
+      "uninvoiced_pos",
+      "three_days_late"
+    ],
+    "question_set": "test"
+  },
+  "summary": {
+    "overall": {
+      "passed": 8,
+      "total": 20
+    },
+    "by_category": {
+      "date_arithmetic": {
+        "passed": 1,
+        "total": 1
+      },
+      "single_table": {
+        "passed": 3,
+        "total": 6
+      },
+      "aggregate": {
+        "passed": 3,
+        "total": 5
+      },
+      "join": {
+        "passed": 1,
+        "total": 2
+      },
+      "join_aggregate": {
+        "passed": 0,
+        "total": 3
+      },
+      "subquery": {
+        "passed": 0,
+        "total": 3
+      }
+    }
+  },
+  "results": [
+    {
+      "id": "payments_over_5_days_late",
+      "category": "date_arithmetic",
+      "question": "List the payment references of payments made more than 5 days after the invoice due date.",
+      "raw_reply": "SELECT sp.reference FROM supplier_payments sp\nJOIN supplier_invoices si ON sp.supplier_invoice_id = si.id\nWHERE julianday(sp.payment_date) - julianday(si.due_date) > 5",
+      "extracted_sql": "SELECT sp.reference FROM supplier_payments sp\nJOIN supplier_invoices si ON sp.supplier_invoice_id = si.id\nWHERE julianday(sp.payment_date) - julianday(si.due_date) > 5",
+      "passed": true,
+      "reason": "ok"
+    },
+    {
+      "id": "suppliers_30_day_terms",
+      "category": "single_table",
+      "question": "Which suppliers have a payment term of 30 days?",
+      "raw_reply": "SELECT s.name, s.payment_terms_days\nFROM suppliers s\nWHERE s.payment_terms_days = 30",
+      "extracted_sql": "SELECT s.name, s.payment_terms_days\nFROM suppliers s\nWHERE s.payment_terms_days = 30",
+      "passed": false,
+      "reason": "result mismatch"
+    },
+    {
+      "id": "orders_in_2024",
+      "category": "single_table",
+      "question": "How many purchase orders were placed in 2024?",
+      "raw_reply": "SELECT COUNT(*) FROM purchase_orders WHERE EXTRACT(YEAR FROM order_date) = 2024",
+      "extracted_sql": "SELECT COUNT(*) FROM purchase_orders WHERE EXTRACT(YEAR FROM order_date) = 2024",
+      "passed": false,
+      "reason": "error: near \"FROM\": syntax error"
+    },
+    {
+      "id": "quantity_per_product",
+      "category": "aggregate",
+      "question": "Show each product description and the total quantity ordered.",
+      "raw_reply": "SELECT p.description, SUM(pl.quantity) AS total_quantity\nFROM purchase_order_lines pl\nJOIN purchase_orders p ON pl.order_id = p.id\nGROUP BY p.id, p.description",
+      "extracted_sql": "SELECT p.description, SUM(pl.quantity) AS total_quantity\nFROM purchase_order_lines pl\nJOIN purchase_orders p ON pl.order_id = p.id\nGROUP BY p.id, p.description",
+      "passed": false,
+      "reason": "error: no such column: p.description"
+    },
+    {
+      "id": "hiking_boots_orders",
+      "category": "join",
+      "question": "List the PO numbers of orders that include the product \"Hiking Boots - Women's\".",
+      "raw_reply": "SELECT p.po_number FROM purchase_order_lines p\nJOIN purchase_orders po ON p.order_id = po.id\nWHERE p.product_id = 'Hiking Boots - Women's'",
+      "extracted_sql": "SELECT p.po_number FROM purchase_order_lines p\nJOIN purchase_orders po ON p.order_id = po.id\nWHERE p.product_id = 'Hiking Boots - Women's'",
+      "passed": false,
+      "reason": "error: near \"s\": syntax error"
+    },
+    {
+      "id": "paid_per_supplier",
+      "category": "join_aggregate",
+      "question": "What is the total amount paid to each supplier?",
+      "raw_reply": "SELECT s.id, SUM(sp.amount) AS total_paid\nFROM suppliers s JOIN supplier_payments sp ON s.id = sp.supplier_invoice_id\nGROUP BY s.id",
+      "extracted_sql": "SELECT s.id, SUM(sp.amount) AS total_paid\nFROM suppliers s JOIN supplier_payments sp ON s.id = sp.supplier_invoice_id\nGROUP BY s.id",
+      "passed": false,
+      "reason": "result mismatch"
+    },
+    {
+      "id": "invoices_due_march_2025",
+      "category": "single_table",
+      "question": "List the invoice numbers of invoices with a due date in March 2025.",
+      "raw_reply": "SELECT i.invoice_number FROM supplier_invoices i\nWHERE julianday(i.due_date) >= julianday('2025-03-01') AND julianday(i.due_date) < julianday('2025-04-01')",
+      "extracted_sql": "SELECT i.invoice_number FROM supplier_invoices i\nWHERE julianday(i.due_date) >= julianday('2025-03-01') AND julianday(i.due_date) < julianday('2025-04-01')",
+      "passed": true,
+      "reason": "ok"
+    },
+    {
+      "id": "top_product_by_quantity",
+      "category": "aggregate",
+      "question": "Which product has the highest total quantity ordered?",
+      "raw_reply": "SELECT p.product_id, SUM(p.quantity) AS total_quantity\nFROM purchase_order_lines p\nGROUP BY p.product_id\nORDER BY total_quantity DESC",
+      "extracted_sql": "SELECT p.product_id, SUM(p.quantity) AS total_quantity\nFROM purchase_order_lines p\nGROUP BY p.product_id\nORDER BY total_quantity DESC",
+      "passed": false,
+      "reason": "result mismatch"
+    },
+    {
+      "id": "average_line_quantity",
+      "category": "single_table",
+      "question": "What is the average quantity per order line?",
+      "raw_reply": "SELECT AVG(ql.quantity) AS average_quantity\nFROM purchase_order_lines ql\nJOIN purchase_orders po ON ql.order_id = po.id",
+      "extracted_sql": "SELECT AVG(ql.quantity) AS average_quantity\nFROM purchase_order_lines ql\nJOIN purchase_orders po ON ql.order_id = po.id",
+      "passed": true,
+      "reason": "ok"
+    },
+    {
+      "id": "large_orders_with_supplier",
+      "category": "join",
+      "question": "List the PO number and supplier name of every purchase order with a total amount above 5000.",
+      "raw_reply": "SELECT p.po_number, s.name\nFROM purchase_orders p JOIN suppliers s ON p.supplier_id = s.id\nWHERE p.total_amount > 5000",
+      "extracted_sql": "SELECT p.po_number, s.name\nFROM purchase_orders p JOIN suppliers s ON p.supplier_id = s.id\nWHERE p.total_amount > 5000",
+      "passed": true,
+      "reason": "ok"
+    },
+    {
+      "id": "distinct_products_ordered",
+      "category": "aggregate",
+      "question": "How many distinct product descriptions appear on purchase order lines?",
+      "raw_reply": "SELECT COUNT(DISTINCT p.description) FROM purchase_order_lines p",
+      "extracted_sql": "SELECT COUNT(DISTINCT p.description) FROM purchase_order_lines p",
+      "passed": true,
+      "reason": "ok"
+    },
+    {
+      "id": "suppliers_over_150_orders",
+      "category": "join_aggregate",
+      "question": "Which suppliers have more than 150 purchase orders?",
+      "raw_reply": "SELECT s.name, COUNT(p.id) AS num_orders\nFROM suppliers s JOIN purchase_orders p ON s.id = p.supplier_id\nGROUP BY s.id\nHAVING COUNT(p.id) > 150",
+      "extracted_sql": "SELECT s.name, COUNT(p.id) AS num_orders\nFROM suppliers s JOIN purchase_orders p ON s.id = p.supplier_id\nGROUP BY s.id\nHAVING COUNT(p.id) > 150",
+      "passed": false,
+      "reason": "result mismatch"
+    },
+    {
+      "id": "suppliers_lead_time_10_or_less",
+      "category": "single_table",
+      "question": "Which suppliers have a lead time of 10 days or less?",
+      "raw_reply": "SELECT s.name, s.lead_time_days FROM suppliers s\nWHERE s.lead_time_days <= 10",
+      "extracted_sql": "SELECT s.name, s.lead_time_days FROM suppliers s\nWHERE s.lead_time_days <= 10",
+      "passed": false,
+      "reason": "result mismatch"
+    },
+    {
+      "id": "distinct_payment_terms",
+      "category": "single_table",
+      "question": "What distinct payment terms (in days) do suppliers offer?",
+      "raw_reply": "SELECT DISTINCT s.payment_terms_days FROM suppliers s",
+      "extracted_sql": "SELECT DISTINCT s.payment_terms_days FROM suppliers s",
+      "passed": true,
+      "reason": "ok"
+    },
+    {
+      "id": "suppliers_per_category",
+      "category": "aggregate",
+      "question": "How many suppliers are there in each category?",
+      "raw_reply": "SELECT category, COUNT(*) AS count\nFROM suppliers\nGROUP BY category",
+      "extracted_sql": "SELECT category, COUNT(*) AS count\nFROM suppliers\nGROUP BY category",
+      "passed": true,
+      "reason": "ok"
+    },
+    {
+      "id": "earliest_latest_order",
+      "category": "aggregate",
+      "question": "What are the earliest and latest order dates among purchase orders?",
+      "raw_reply": "SELECT MIN(order_date), MAX(order_date) FROM purchase_orders",
+      "extracted_sql": "SELECT MIN(order_date), MAX(order_date) FROM purchase_orders",
+      "passed": true,
+      "reason": "ok"
+    },
+    {
+      "id": "longest_lead_time_ordered_supplier",
+      "category": "subquery",
+      "question": "Among suppliers that have received at least one purchase order, which has the longest lead time?",
+      "raw_reply": "SELECT s.name, s.lead_time_days\nFROM suppliers s\nJOIN purchase_orders p ON s.id = p.supplier_id\nWHERE p.id IS NOT NULL\nORDER BY s.lead_time_days DESC\nLIMIT 1",
+      "extracted_sql": "SELECT s.name, s.lead_time_days\nFROM suppliers s\nJOIN purchase_orders p ON s.id = p.supplier_id\nWHERE p.id IS NOT NULL\nORDER BY s.lead_time_days DESC\nLIMIT 1",
+      "passed": false,
+      "reason": "result mismatch"
+    },
+    {
+      "id": "orders_above_average_total",
+      "category": "subquery",
+      "question": "List the PO numbers of purchase orders whose total amount is above the average purchase order total.",
+      "raw_reply": "SELECT p.po_number, p.total_amount\nFROM purchase_orders p\nWHERE p.total_amount > (SELECT AVG(total_amount) FROM purchase_orders)",
+      "extracted_sql": "SELECT p.po_number, p.total_amount\nFROM purchase_orders p\nWHERE p.total_amount > (SELECT AVG(total_amount) FROM purchase_orders)",
+      "passed": false,
+      "reason": "result mismatch"
+    },
+    {
+      "id": "highest_total_pos",
+      "category": "subquery",
+      "question": "List the PO numbers of all purchase orders that have the highest total amount.",
+      "raw_reply": "SELECT p.po_number, p.total_amount FROM purchase_orders p\nORDER BY p.total_amount DESC LIMIT 1",
+      "extracted_sql": "SELECT p.po_number, p.total_amount FROM purchase_orders p\nORDER BY p.total_amount DESC LIMIT 1",
+      "passed": false,
+      "reason": "result mismatch"
+    },
+    {
+      "id": "orders_for_lozano",
+      "category": "join_aggregate",
+      "question": "How many purchase orders were placed with the supplier Lozano, Chaney and Carr?",
+      "raw_reply": "SELECT COUNT(*) FROM purchase_orders p\nWHERE supplier_id IN ('Lozano', 'Chaney', 'Carr')",
+      "extracted_sql": "SELECT COUNT(*) FROM purchase_orders p\nWHERE supplier_id IN ('Lozano', 'Chaney', 'Carr')",
+      "passed": false,
+      "reason": "result mismatch"
+    }
+  ]
+}
