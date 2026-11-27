@@ -1,0 +1,84 @@
+{
+  "setup": {
+    "model": "HuggingFaceTB/SmolLM3-3B",
+    "precision": "4-bit nf4",
+    "decoding": "greedy",
+    "prompt": "few-shot, 3 dev examples",
+    "examples": [
+      "spend_per_supplier",
+      "uninvoiced_pos",
+      "three_days_late"
+    ]
+  },
+  "summary": {
+    "overall": {
+      "passed": 4,
+      "total": 5
+    },
+    "by_category": {
+      "single_table": {
+        "passed": 2,
+        "total": 2
+      },
+      "anti_join": {
+        "passed": 0,
+        "total": 1
+      },
+      "join_aggregate": {
+        "passed": 1,
+        "total": 1
+      },
+      "join": {
+        "passed": 1,
+        "total": 1
+      }
+    }
+  },
+  "results": [
+    {
+      "id": "unpaid_invoices",
+      "category": "single_table",
+      "question": "List the invoice numbers of all invoices that have not been paid in full.",
+      "raw_reply": "SELECT i.invoice_number FROM supplier_invoices i\nLEFT JOIN supplier_payments p ON i.id = p.supplier_invoice_id\nWHERE p.id IS NULL",
+      "extracted_sql": "SELECT i.invoice_number FROM supplier_invoices i\nLEFT JOIN supplier_payments p ON i.id = p.supplier_invoice_id\nWHERE p.id IS NULL",
+      "passed": true,
+      "reason": "ok"
+    },
+    {
+      "id": "total_po_value",
+      "category": "single_table",
+      "question": "What is the total value of all purchase orders?",
+      "raw_reply": "SELECT SUM(total_amount) AS total_value FROM purchase_orders",
+      "extracted_sql": "SELECT SUM(total_amount) AS total_value FROM purchase_orders",
+      "passed": true,
+      "reason": "ok"
+    },
+    {
+      "id": "suppliers_no_orders",
+      "category": "anti_join",
+      "question": "Which suppliers have never been sent a purchase order?",
+      "raw_reply": "SELECT s.id, s.name\nFROM suppliers s\nLEFT JOIN purchase_orders p ON s.id = p.supplier_id\nWHERE p.supplier_id IS NULL",
+      "extracted_sql": "SELECT s.id, s.name\nFROM suppliers s\nLEFT JOIN purchase_orders p ON s.id = p.supplier_id\nWHERE p.supplier_id IS NULL",
+      "passed": false,
+      "reason": "result mismatch"
+    },
+    {
+      "id": "late_by_supplier",
+      "category": "join_aggregate",
+      "question": "For each supplier, how many deliveries arrived after the expected date? Highest first.",
+      "raw_reply": "SELECT s.name, COUNT(g.receipt_date) AS deliveries_after_expected_date\nFROM suppliers s\nJOIN purchase_orders p ON s.id = p.supplier_id\nJOIN goods_receipts g ON p.id = g.po_id\nWHERE julianday(g.receipt_date) > julianday(p.expected_date)\nGROUP BY s.name ORDER BY deliveries_after_expected_date DESC",
+      "extracted_sql": "SELECT s.name, COUNT(g.receipt_date) AS deliveries_after_expected_date\nFROM suppliers s\nJOIN purchase_orders p ON s.id = p.supplier_id\nJOIN goods_receipts g ON p.id = g.po_id\nWHERE julianday(g.receipt_date) > julianday(p.expected_date)\nGROUP BY s.name ORDER BY deliveries_after_expected_date DESC",
+      "passed": true,
+      "reason": "ok"
+    },
+    {
+      "id": "unpaid_invoice_suppliers",
+      "category": "join",
+      "question": "List the supplier name and invoice number for every invoice not paid in full.",
+      "raw_reply": "SELECT s.name, i.invoice_number FROM supplier_invoices i\nJOIN suppliers s ON i.supplier_id = s.id\nWHERE i.amount_paid < i.total_amount",
+      "extracted_sql": "SELECT s.name, i.invoice_number FROM supplier_invoices i\nJOIN suppliers s ON i.supplier_id = s.id\nWHERE i.amount_paid < i.total_amount",
+      "passed": true,
+      "reason": "ok"
+    }
+  ]
+}
