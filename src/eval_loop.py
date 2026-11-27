@@ -1,17 +1,20 @@
 from extract_sql import extract_sql
 from grader import grade
-from prompt import build_messages
+from prompt import build_few_shot_messages, build_messages
 
 
-def evaluate(con, questions, generate, schema):
+def evaluate(con, questions, generate, schema, examples=None):
     """Run every question through the model and grade the answers."""
     results = []
     for q in questions:
-        messages = build_messages(schema, q["question"])
-        raw = generate(messages)
-        sql = extract_sql(raw)
-        verdict = grade(con, q["sql"], sql)
-        results.append({
+            if examples:
+              messages = build_few_shot_messages(schema, q["question"], examples)
+            else:
+             messages = build_messages(schema, q["question"])
+            raw = generate(messages)
+            sql = extract_sql(raw)
+            verdict = grade(con, q["sql"], sql)
+            results.append({
             "id": q["id"],
             "category": q["category"],
             "question": q["question"],

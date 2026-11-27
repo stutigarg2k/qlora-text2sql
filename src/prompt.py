@@ -16,4 +16,12 @@ def build_messages(schema, question):
         {"role": "system", "content": SYSTEM},
         {"role": "user", "content": build_user_message(schema, question)},
     ]
+def build_few_shot_messages(schema, question, examples):
+    """Same as build_messages, but with solved examples before the real question."""
+    messages = [{"role": "system", "content": SYSTEM}]
+    for ex in examples:
+        messages.append({"role": "user", "content": build_user_message(schema, ex["question"])})
+        messages.append({"role": "assistant", "content": ex["sql"].strip()})
+    messages.append({"role": "user", "content": build_user_message(schema, question)})
+    return messages
 
