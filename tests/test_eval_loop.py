@@ -28,7 +28,7 @@ REPLIES = {
 
 
 def fake_generate(messages):
-    prompt = messages[0]["content"]
+    prompt = messages[-1]["content"]
     for question, reply in REPLIES.items():
         if prompt.endswith("Question: " + question):
             return reply
@@ -58,4 +58,4 @@ def test_summary_counts():
     assert summary["by_category"]["simple"] == {"passed": 1, "total": 2}
     assert summary["by_category"]["hard"] == {"passed": 0, "total": 1}
 
-    
+
