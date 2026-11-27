@@ -1,0 +1,111 @@
+{
+  "setup": {
+    "model": "HuggingFaceTB/SmolLM3-3B",
+    "precision": "4-bit nf4",
+    "decoding": "greedy",
+    "max_new_tokens": 200,
+    "question_set": "dev"
+  },
+  "summary": {
+    "overall": {
+      "passed": 2,
+      "total": 8
+    },
+    "by_category": {
+      "single_table": {
+        "passed": 2,
+        "total": 2
+      },
+      "anti_join": {
+        "passed": 0,
+        "total": 2
+      },
+      "join_aggregate": {
+        "passed": 0,
+        "total": 2
+      },
+      "date_arithmetic": {
+        "passed": 0,
+        "total": 1
+      },
+      "join": {
+        "passed": 0,
+        "total": 1
+      }
+    }
+  },
+  "results": [
+    {
+      "id": "unpaid_invoices",
+      "category": "single_table",
+      "question": "List the invoice numbers of all invoices that have not been paid in full.",
+      "raw_reply": "SELECT invoice_number \nFROM supplier_invoices \nWHERE amount_paid < total_amount;",
+      "extracted_sql": "SELECT invoice_number \nFROM supplier_invoices \nWHERE amount_paid < total_amount;",
+      "passed": true,
+      "reason": "ok"
+    },
+    {
+      "id": "total_po_value",
+      "category": "single_table",
+      "question": "What is the total value of all purchase orders?",
+      "raw_reply": "SELECT SUM(total_amount) AS total_value\nFROM purchase_orders;",
+      "extracted_sql": "SELECT SUM(total_amount) AS total_value\nFROM purchase_orders;",
+      "passed": true,
+      "reason": "ok"
+    },
+    {
+      "id": "suppliers_no_orders",
+      "category": "anti_join",
+      "question": "Which suppliers have never been sent a purchase order?",
+      "raw_reply": "SELECT s.name\nFROM suppliers s\nLEFT JOIN purchase_orders po ON s.company_id = po.company_id\nWHERE po.id IS NULL;",
+      "extracted_sql": "SELECT s.name\nFROM suppliers s\nLEFT JOIN purchase_orders po ON s.company_id = po.company_id\nWHERE po.id IS NULL;",
+      "passed": false,
+      "reason": "result mismatch"
+    },
+    {
+      "id": "uninvoiced_pos",
+      "category": "anti_join",
+      "question": "List the PO numbers of purchase orders that have not been invoiced yet.",
+      "raw_reply": "SELECT po_number FROM purchase_orders WHERE po_id NOT IN (SELECT po_id FROM supplier_invoices);",
+      "extracted_sql": "SELECT po_number FROM purchase_orders WHERE po_id NOT IN (SELECT po_id FROM supplier_invoices);",
+      "passed": false,
+      "reason": "error: no such column: po_id"
+    },
+    {
+      "id": "spend_per_supplier",
+      "category": "join_aggregate",
+      "question": "Show each supplier's name and total purchase order value, highest first.",
+      "raw_reply": "SELECT s.name, SUM(p.total_amount) AS total_purchase_order_value\nFROM suppliers s\nJOIN purchase_orders p ON s.company_id = p.company_id\nGROUP BY s.name\nORDER BY total_purchase_order_value DESC;",
+      "extracted_sql": "SELECT s.name, SUM(p.total_amount) AS total_purchase_order_value\nFROM suppliers s\nJOIN purchase_orders p ON s.company_id = p.company_id\nGROUP BY s.name\nORDER BY total_purchase_order_value DESC;",
+      "passed": false,
+      "reason": "result mismatch"
+    },
+    {
+      "id": "late_by_supplier",
+      "category": "join_aggregate",
+      "question": "For each supplier, how many deliveries arrived after the expected date? Highest first.",
+      "raw_reply": "SELECT s.name, COUNT(DISTINCT g.received_by) AS deliveries_after_expected_date\nFROM suppliers s\nJOIN purchase_orders po ON s.company_id = po.company_id\nJOIN goods_receipts g ON po.id = g.po_id\nWHERE g.received_by IS NOT NULL\nAND g.received_by > po.expected_date\nGROUP BY s.name\nORDER BY COUNT(DISTINCT g.received_by) DESC;",
+      "extracted_sql": "SELECT s.name, COUNT(DISTINCT g.received_by) AS deliveries_after_expected_date\nFROM suppliers s\nJOIN purchase_orders po ON s.company_id = po.company_id\nJOIN goods_receipts g ON po.id = g.po_id\nWHERE g.received_by IS NOT NULL\nAND g.received_by > po.expected_date\nGROUP BY s.name\nORDER BY COUNT(DISTINCT g.received_by) DESC;",
+      "passed": false,
+      "reason": "result mismatch"
+    },
+    {
+      "id": "three_days_late",
+      "category": "date_arithmetic",
+      "question": "List the PO numbers of orders received exactly 3 days after the expected date.",
+      "raw_reply": "SELECT po_number FROM purchase_orders WHERE receipt_date = DATE('now', '-3 days') AND status = 'Received'; \n\nHowever, the correct query should use the `DATE` function to calculate the date 3 days ago from the current date, and then compare it to the `receipt_date`. The correct SQL query is:\n\nSELECT po_number FROM purchase_orders WHERE receipt_date = DATE('now', '-3 days') AND status = 'Received'; \n\nBut to make it more precise, we should use the `DATE` function to calculate the date 3 days ago from the current date, and then compare it to the `receipt_date`. The correct SQL query is:\n\nSELECT po_number FROM purchase_orders WHERE receipt_date = DATE('now', '-3 days') AND status = 'Received'; \n\nHowever, the correct query should use the `DATE` function to calculate the date 3 days ago from the current date, and then compare it to the `receipt_date`. The correct SQL query is",
+      "extracted_sql": "SELECT po_number FROM purchase_orders WHERE receipt_date = DATE('now', '-3 days') AND status = 'Received';",
+      "passed": false,
+      "reason": "error: no such column: receipt_date"
+    },
+    {
+      "id": "unpaid_invoice_suppliers",
+      "category": "join",
+      "question": "List the supplier name and invoice number for every invoice not paid in full.",
+      "raw_reply": "SELECT s.name, si.invoice_number\nFROM suppliers s\nJOIN supplier_invoices si ON s.company_id = si.company_id\nWHERE si.amount_paid < si.total_amount;",
+      "extracted_sql": "SELECT s.name, si.invoice_number\nFROM suppliers s\nJOIN supplier_invoices si ON s.company_id = si.company_id\nWHERE si.amount_paid < si.total_amount;",
+      "passed": false,
+      "reason": "result mismatch"
+    }
+  ]
+}
