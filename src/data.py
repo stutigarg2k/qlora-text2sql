@@ -9,7 +9,7 @@ def to_example(row, tokenizer):
         messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
     full = tokenizer.apply_chat_template(
         messages + [answer], tokenize=False, enable_thinking=False)
-    return {"prompt": prompt, "completion": full[len(prompt):]}
+    return {"prompt": prompt, "completion": full[len(prompt):].rstrip("\n")}
 
 
 def load_training_data(tokenizer, n_train, n_val, seed=42):
