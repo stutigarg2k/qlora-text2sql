@@ -1,12 +1,20 @@
 from data import to_example
 
 
-def test_training_example_uses_the_exam_prompt_format():
+class FakeTokenizer:
+    def apply_chat_template(self, messages, tokenize=False,
+                            add_generation_prompt=False, enable_thinking=False):
+        text = "".join(f"[{m['role']}]{m['content']}" for m in messages)
+        if add_generation_prompt:
+            text += "[assistant]"
+        return text
+
+
+def test_training_example_splits_into_prompt_and_answer():
     row = {"context": "CREATE TABLE t (a INTEGER)", "question": "How many?",
            "answer": "SELECT COUNT(*) FROM t"}
-    ex = to_example(row)
-    assert ex["prompt"][0]["role"] == "system"
-    assert "CREATE TABLE t (a INTEGER)" in ex["prompt"][-1]["content"]
-    assert ex["prompt"][-1]["content"].endswith("Question: How many?")
-    assert ex["completion"] == [{"role": "assistant", "content": "SELECT COUNT(*) FROM t"}]
+    ex = to_example(row, FakeTokenizer())
+    assert "CREATE TABLE t (a INTEGER)" in ex["prompt"]
+    assert ex["prompt"].endswith("Question: How many?[assistant]")
+    assert ex["completion"] == "SELECT COUNT(*) FROM t"
     
